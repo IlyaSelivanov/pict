@@ -10,9 +10,9 @@ using namespace std;
 void PrintMessage
     (
     IN MsgType  type,
-    IN wchar_t* text1,
-    IN wchar_t* text2,
-    IN wchar_t* text3
+    IN const wchar_t* text1,
+    IN const wchar_t* text2,
+    IN const wchar_t* text3
     )
 {
     switch ( type )
@@ -51,8 +51,8 @@ void PrintMessage
     }
 
     wcerr << text1;
-    if ( text2 != NULL ) wcerr << L" " << text2;
-    if ( text3 != NULL ) wcerr << L" " << text3;
+    if ( text2 != nullptr ) wcerr << L" " << text2;
+    if ( text3 != nullptr ) wcerr << L" " << text3;
     wcerr << endl;
 }
 

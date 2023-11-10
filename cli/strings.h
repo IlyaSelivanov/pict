@@ -110,7 +110,7 @@ std::wstring charToStr
 //
 std::wstring charArrToStr
     (
-    IN wchar_t* c
+    IN const wchar_t* c
     );
 
 //
@@ -124,7 +124,7 @@ std::string wideCharToAnsi
 //
 //
 //
-enum EncodingType
+enum class EncodingType
 {
     ANSI,
     UTF8,

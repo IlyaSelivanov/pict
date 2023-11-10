@@ -8,7 +8,8 @@
 #include "strings.h"
 using namespace pictcore;
 
-const int UNDEFINED_ORDER = std::numeric_limits<int>::max();
+const int UNDEFINED_ORDER = std::numeric_limits<int>::min();
+const int MAXIMUM_ORDER = std::numeric_limits<int>::max();
 
 //
 //
@@ -22,8 +23,8 @@ public:
         unsigned int weight,
         bool         positive
         ) : _names           ( names ),
-            _weight          ( weight ),
             _positive        ( positive ),
+            _weight          ( weight ),
             _currentNameIndex( 0 ) {}
 
     wstrings& GetAllNames()       { return( _names ); }
@@ -58,8 +59,10 @@ public:
     Parameter*                 GcdPointer;
 
     CModelParameter() :
-        IsResultParameter( false ),
-        GcdPointer( NULL ) {}
+        Name(L""),
+        Order(static_cast<unsigned int>(UNDEFINED_ORDER)),
+        IsResultParameter(false),
+        GcdPointer(nullptr){}
 
     int GetValueOrdinal( IN std::wstring& name, IN bool caseSensitive );
     bool ValueNamesUnique( IN bool CaseSensitive );
@@ -103,6 +106,7 @@ public:
     size_t                    MaxApproxTries;  // for Approximate mode
 
     std::wstring                   RowSeedsFile;
+    std::wstring                   Format;
 
     std::vector< CModelParameter > Parameters;
     std::vector< CModelSubmodel >  Submodels;
@@ -120,12 +124,12 @@ public:
         CaseSensitive(false),
         Verbose(false),
         Statistics(false),
-        RowSeedsFile(L""),
-        GenerationMode(Regular),
+        GenerationMode(GenerationMode::Regular),
         MaxApproxTries(1000),
+        RowSeedsFile(L""),
         ConstraintPredicates(L""),
         m_hasNegativeValues(false),
-        m_encoding(ANSI),
+        m_encoding(EncodingType::ANSI),
         m_totalCombinations(0),
         m_remainingCombinations(0) {}
 
@@ -155,8 +159,8 @@ public:
 private:
     bool            m_hasNegativeValues;
     EncodingType    m_encoding;              // io encoding determined based on input file
-    long            m_totalCombinations;     // number of combinations PICT dealt with in this run
-    long            m_remainingCombinations; // number of uncovered combinations (Preview and Approximate)
+    size_t          m_totalCombinations;     // number of combinations PICT dealt with in this run
+    size_t          m_remainingCombinations; // number of uncovered combinations (Preview and Approximate)
 
     void readFile                  ( const std::wstring& filePath );
     bool readModel                 ( const std::wstring& filePath );

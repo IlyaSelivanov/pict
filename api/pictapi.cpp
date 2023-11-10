@@ -21,7 +21,7 @@ PictCreateTask()
 {
     Task* taskObj = new Task();
     return( static_cast<PICT_HANDLE>( taskObj ) );
-};
+}
 
 //
 //
@@ -133,12 +133,12 @@ PictGenerate
     {
         switch( e.GetErrorType() )
         {
-        case OutOfMemory:
+        case ErrorType::OutOfMemory:
             return( PICT_OUT_OF_MEMORY );
-        case GenerationCancelled:
-        case TooManyRows:        
-        case Unknown:
-        case GenerationFailure:
+        case ErrorType::GenerationCancelled:
+        case ErrorType::TooManyRows:
+        case ErrorType::Unknown:
+        case ErrorType::GenerationFailure:
         default:
             return( PICT_GENERATION_ERROR );
         }
@@ -229,7 +229,7 @@ PictDeleteTask
 {
     Task* taskObj = static_cast<Task*>( NO_CONST_HANDLE( task ));
     delete( taskObj );
-};
+}
 
 //
 //
@@ -242,12 +242,12 @@ PictCreateModel
     )
 {
     Model* modelObj = new Model( L"",
-                                 MixedOrder, 
+                                 GenerationType::MixedOrder,
                                  0,
                                  randomSeed );
     
     return( static_cast<PICT_HANDLE>( modelObj ));   
-};
+}
 
 //
 //
@@ -271,21 +271,22 @@ PictAddParameter
                                       false );
     try
     {
-        if( NULL != param )
+        if( nullptr != param )
         {
+            if( nullptr != valueWeights )
+            {
+                std::vector<int> weights;
+                weights.reserve( valueCount );
+                weights.insert( weights.begin(), valueWeights, valueWeights + valueCount );
+                param->SetWeights( std::move( weights ));
+            }
+
             modelObj->AddParameter( param );
-        }
-        
-        if( NULL != valueWeights )
-        {
-            std::vector<int> weights;
-            weights.reserve( valueCount );
-            weights.insert( weights.begin(), valueWeights, valueWeights + valueCount );
         }
     }
     catch( ... )
     {
-        param = NULL;
+        param = nullptr;
     }
 
     return( param );
@@ -334,7 +335,7 @@ PictAttachChildModel
     {
         return( PICT_OUT_OF_MEMORY );
     }
-};
+}
 
 //
 //

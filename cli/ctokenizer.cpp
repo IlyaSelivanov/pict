@@ -123,7 +123,7 @@ void ConstraintsTokenizer::parseConstraint( IN OUT CTokenList& tokens )
     // <clause>
     if ( isNextSubstring( wstring(TEXT_TokenKeywordIf)) )
     {
-        CToken* tokenKeywordIf = new CToken( TokenType_KeywordIf, position );
+        CToken* tokenKeywordIf = new CToken( TokenType::KeywordIf, position );
         tokens.push_back( tokenKeywordIf );
 
         skipWhiteChars();
@@ -133,12 +133,12 @@ void ConstraintsTokenizer::parseConstraint( IN OUT CTokenList& tokens )
         position = _currentPosition;
         if ( isNextSubstring( charArrToStr( TEXT_TokenKeywordThen )))
         {
-            CToken* tokenKeywordThen = new CToken( TokenType_KeywordThen, position );
+            CToken* tokenKeywordThen = new CToken( TokenType::KeywordThen, position );
             tokens.push_back( tokenKeywordThen );
         }
         else
         {
-            throw CSyntaxError( SyntaxErrType_NoKeywordThen, _currentPosition );
+            throw CSyntaxError( SyntaxErrorType::NoKeywordThen, _currentPosition );
         }
     }
 
@@ -150,7 +150,7 @@ void ConstraintsTokenizer::parseConstraint( IN OUT CTokenList& tokens )
     position = _currentPosition;
     if ( isNextSubstring( charArrToStr( TEXT_TokenKeywordElse )))
     {
-        CToken* tokenKeywordElse = new CToken( TokenType_KeywordElse, position );
+        CToken* tokenKeywordElse = new CToken( TokenType::KeywordElse, position );
         tokens.push_back( tokenKeywordElse );
 
         parseClause( tokens );
@@ -161,7 +161,7 @@ void ConstraintsTokenizer::parseConstraint( IN OUT CTokenList& tokens )
     position = _currentPosition;
     if ( ! isNextSubstring ( charArrToStr( TEXT_TokenConstraintEnd )))
     {
-        throw CSyntaxError( SyntaxErrType_NoConstraintEnd, _currentPosition );
+        throw CSyntaxError( SyntaxErrorType::NoConstraintEnd, _currentPosition );
     }
 
     // some functions are like macros so do the expansions on the token list
@@ -184,7 +184,7 @@ void ConstraintsTokenizer::parseClause( IN OUT CTokenList& tokens )
     wstring::iterator position = _currentPosition;
     
     LogicalOper logicalOper = getLogicalOper();
-    if ( LogicalOper_Unknown != logicalOper )
+    if ( LogicalOper::Unknown != logicalOper )
     {
         CToken* token = new CToken( logicalOper, position );
         tokens.push_back( token );
@@ -209,7 +209,7 @@ void ConstraintsTokenizer::parseCondition( IN OUT CTokenList& tokens )
     // (<clause>)
     if ( isNextSubstring( charArrToStr( TEXT_TokenParenthesisOpen )))
     {
-        CToken* token = new CToken( TokenType_ParenthesisOpen, position );;
+        CToken* token = new CToken( TokenType::ParenthesisOpen, position );;
         tokens.push_back( token );
 
         skipWhiteChars();
@@ -219,19 +219,19 @@ void ConstraintsTokenizer::parseCondition( IN OUT CTokenList& tokens )
         position = _currentPosition;
         if ( isNextSubstring( charArrToStr( TEXT_TokenParenthesisClose )))
         {
-            token = new CToken( TokenType_ParenthesisClose, position );
+            token = new CToken( TokenType::ParenthesisClose, position );
             tokens.push_back( token );
         }
         else
         {
-            throw CSyntaxError( SyntaxErrType_NoEndParenthesis, _currentPosition );
+            throw CSyntaxError( SyntaxErrorType::NoEndParenthesis, _currentPosition );
         }
     }
 
     // NOT <clause> 
     else if ( isNextSubstring( charArrToStr( TEXT_TokenLogicalOperNOT )))
     {
-        CToken* token = new CToken( LogicalOper_NOT, position );
+        CToken* token = new CToken( LogicalOper::Not, position );
         tokens.push_back( token );
         
         skipWhiteChars();
@@ -261,7 +261,7 @@ void ConstraintsTokenizer::parseTerm( IN OUT CTokenList& tokens )
 
     // check whether it's one of the functions
     CFunction *function = getFunction();
-    if( NULL != function )
+    if( nullptr != function )
     {
         CToken* token;
         try
@@ -282,28 +282,28 @@ void ConstraintsTokenizer::parseTerm( IN OUT CTokenList& tokens )
         wstring paramName = getParameterName();
         CParameters::iterator found = _model.findParamByName( paramName );
         
-        CParameter* param = NULL;
+        CParameter* param = nullptr;
         if ( found != _model.Parameters.end() )
         {
             param = &*found;
         }
 
         skipWhiteChars();
-        Relation relation = getRelation();
+        RelationType relationType = getRelationType();
 
         skipWhiteChars();
 
-        CTerm* term = NULL;
-        switch( relation )
+        CTerm* term = nullptr;
+        switch( relationType )
         {
-            case Relation_IN:
-            case Relation_NOT_IN:
+            case RelationType::In:
+            case RelationType::NotIn:
             {
                 CValueSet* valueSet = new CValueSet;
 
                 if ( ! isNextSubstring( charArrToStr( TEXT_TokenValueSetOpen )))
                 {
-                    throw CSyntaxError( SyntaxErrType_NoValueSetOpen, _currentPosition );
+                    throw CSyntaxError( SyntaxErrorType::NoValueSetOpen, _currentPosition );
                 }
                 
                 try
@@ -319,7 +319,7 @@ void ConstraintsTokenizer::parseTerm( IN OUT CTokenList& tokens )
                 skipWhiteChars();
                 if ( ! isNextSubstring( charArrToStr( TEXT_TokenValueSetClose )))
                 {
-                    throw CSyntaxError( SyntaxErrType_NoValueSetClose, _currentPosition );
+                    throw CSyntaxError( SyntaxErrorType::NoValueSetClose, _currentPosition );
                 }
 
                 // raw text of a term
@@ -328,7 +328,7 @@ void ConstraintsTokenizer::parseTerm( IN OUT CTokenList& tokens )
 
                 try
                 {
-                    term = new CTerm( param, relation, SyntaxTermDataType_ValueSet, valueSet, rawText );
+                    term = new CTerm( param, relationType, TermDataType::ValueSet, valueSet, rawText );
                 }
                 catch( ... )
                 {
@@ -350,7 +350,7 @@ void ConstraintsTokenizer::parseTerm( IN OUT CTokenList& tokens )
                     //
                     // look up parameters by their names and return references
                     //
-                    CParameter *param2 = NULL;
+                    CParameter *param2 = nullptr;
                     found = _model.findParamByName( paramName2 );
                     if ( found != _model.Parameters.end() )
                     {
@@ -360,7 +360,7 @@ void ConstraintsTokenizer::parseTerm( IN OUT CTokenList& tokens )
                     wstring rawText;
                     rawText.assign( position, _currentPosition );
 
-                    term = new CTerm( param, relation, SyntaxTermDataType_ParameterName, param2, rawText );
+                    term = new CTerm( param, relationType, TermDataType::ParameterName, param2, rawText );
                 }
                 else
                 {
@@ -372,7 +372,7 @@ void ConstraintsTokenizer::parseTerm( IN OUT CTokenList& tokens )
 
                     try
                     {
-                        term = new CTerm( param, relation, SyntaxTermDataType_Value, value, rawText );
+                        term = new CTerm( param, relationType, TermDataType::Value, value, rawText );
                     }
                     catch( ... )
                     {
@@ -405,32 +405,32 @@ void ConstraintsTokenizer::parseTerm( IN OUT CTokenList& tokens )
 // <term> ::= IsNegative(<parameter_name>)
 //
 // Returns a CFunction object if in fact a function was parsed
-// or NULL otherwise
+// or "nullptr" otherwise
 //
 CFunction *ConstraintsTokenizer::getFunction()
 {
     skipWhiteChars();
     wstring::iterator position = _currentPosition;
 
-    FunctionType type = FunctionTypeUnknown;
+    FunctionType type = FunctionType::Unknown;
 
     if ( isNextSubstring( charArrToStr( TEXT_FunctionIsNegativeParam )))
     {
-        type = FunctionTypeIsNegativeParam;
+        type = FunctionType::IsNegativeParam;
     }
     else if ( isNextSubstring( charArrToStr( TEXT_FunctionIsPositiveParam )))
     {
-        type = FunctionTypeIsPositiveParam;
+        type = FunctionType::IsPositiveParam;
     }
     else
     {
-        return NULL;
+        return nullptr;
     }
 
     // opening bracket
     if ( ! isNextSubstring( charArrToStr( TEXT_TokenParenthesisOpen )))
     {
-        throw CSyntaxError( SyntaxErrType_FunctionNoParenthesisOpen, _currentPosition );
+        throw CSyntaxError( SyntaxErrorType::FunctionNoParenthesisOpen, _currentPosition );
     }
 
     // get the parameter name
@@ -438,7 +438,7 @@ CFunction *ConstraintsTokenizer::getFunction()
     wstring paramName = getString( charArrToStr( TEXT_TokenParenthesisClose ));
     CParameters::iterator found = _model.findParamByName( paramName );
 
-    CParameter* param = NULL;
+    CParameter* param = nullptr;
     if ( found != _model.Parameters.end() )
     {
         param = &*found;
@@ -446,14 +446,14 @@ CFunction *ConstraintsTokenizer::getFunction()
 
     if ( ! isNextSubstring( charArrToStr( TEXT_TokenParenthesisClose )))
     {
-        throw CSyntaxError( SyntaxErrType_FunctionNoParenthesisClose, _currentPosition );
+        throw CSyntaxError( SyntaxErrorType::FunctionNoParenthesisClose, _currentPosition );
     }
 
     // now create a CFunction and return it
     wstring rawText;
     rawText.assign( position, _currentPosition );
 
-    CFunction* function = new CFunction( type, FunctionDataType_Parameter, param, paramName, rawText );
+    CFunction* function = new CFunction( type, FunctionDataType::Parameter, param, paramName, rawText );
 
     return( function );
 }
@@ -475,7 +475,7 @@ CValue* ConstraintsTokenizer::getValue()
         text = getString( charArrToStr( TEXT_TokenQuotes ));
         if (! isNextSubstring( charArrToStr( TEXT_TokenQuotes )))
         {
-            throw CSyntaxError( SyntaxErrType_UnexpectedEndOfString, _currentPosition );
+            throw CSyntaxError( SyntaxErrorType::UnexpectedEndOfString, _currentPosition );
         }
 
         value = new CValue( text );
@@ -514,27 +514,24 @@ void ConstraintsTokenizer::getValueSet( OUT CValueSet& valueSet )
 //
 // Returns the next relation; order of comparisons is important
 //
-Relation ConstraintsTokenizer::getRelation()
+RelationType ConstraintsTokenizer::getRelationType()
 {
-    if     ( isNextSubstring( charArrToStr( TEXT_TokenRelationEQ     ))) return ( Relation_EQ   );
-    else if( isNextSubstring( charArrToStr( TEXT_TokenRelationNE     ))) return ( Relation_NE   );
-    else if( isNextSubstring( charArrToStr( TEXT_TokenRelationLE     ))) return ( Relation_LE   );
-    else if( isNextSubstring( charArrToStr( TEXT_TokenRelationGE     ))) return ( Relation_GE   );
-    else if( isNextSubstring( charArrToStr( TEXT_TokenRelationGT     ))) return ( Relation_GT   );
-    else if( isNextSubstring( charArrToStr( TEXT_TokenRelationLT     ))) return ( Relation_LT   );
-    else if( isNextSubstring( charArrToStr( TEXT_TokenRelationIN     ))) return ( Relation_IN   );
-    else if( isNextSubstring( charArrToStr( TEXT_TokenRelationLIKE   ))) return ( Relation_LIKE );
+    if     ( isNextSubstring( charArrToStr( TEXT_TokenRelationEQ     ))) return ( RelationType::Eq   );
+    else if( isNextSubstring( charArrToStr( TEXT_TokenRelationNE     ))) return ( RelationType::Ne   );
+    else if( isNextSubstring( charArrToStr( TEXT_TokenRelationLE     ))) return ( RelationType::Le   );
+    else if( isNextSubstring( charArrToStr( TEXT_TokenRelationGE     ))) return ( RelationType::Ge   );
+    else if( isNextSubstring( charArrToStr( TEXT_TokenRelationGT     ))) return ( RelationType::Gt   );
+    else if( isNextSubstring( charArrToStr( TEXT_TokenRelationLT     ))) return ( RelationType::Lt   );
+    else if( isNextSubstring( charArrToStr( TEXT_TokenRelationIN     ))) return ( RelationType::In   );
+    else if( isNextSubstring( charArrToStr( TEXT_TokenRelationLIKE   ))) return ( RelationType::Like );
     else if( isNextSubstring( charArrToStr( TEXT_TokenLogicalOperNOT )))
     {
         skipWhiteChars();
-        if     ( isNextSubstring( charArrToStr( TEXT_TokenRelationIN   ))) return ( Relation_NOT_IN   );
-        else if( isNextSubstring( charArrToStr( TEXT_TokenRelationLIKE ))) return ( Relation_NOT_LIKE );
-        else throw CSyntaxError( SyntaxErrType_UnknownRelation, _currentPosition );
+        if     ( isNextSubstring( charArrToStr( TEXT_TokenRelationIN   ))) return ( RelationType::NotIn   );
+        else if( isNextSubstring( charArrToStr( TEXT_TokenRelationLIKE ))) return ( RelationType::NotLike );
+        else throw CSyntaxError( SyntaxErrorType::UnknownRelation, _currentPosition );
     }
-    else throw CSyntaxError( SyntaxErrType_UnknownRelation, _currentPosition );
-
-    assert( false );
-    return ( Relation_Unknown );
+    else throw CSyntaxError( SyntaxErrorType::UnknownRelation, _currentPosition );
 }
 
 //
@@ -542,9 +539,9 @@ Relation ConstraintsTokenizer::getRelation()
 //
 LogicalOper ConstraintsTokenizer::getLogicalOper()
 {
-    if      ( isNextSubstring( charArrToStr( TEXT_TokenLogicalOperAND ))) return ( LogicalOper_AND );
-    else if ( isNextSubstring( charArrToStr( TEXT_TokenLogicalOperOR  ))) return ( LogicalOper_OR );
-    else return ( LogicalOper_Unknown );
+    if      ( isNextSubstring( charArrToStr( TEXT_TokenLogicalOperAND ))) return ( LogicalOper::And );
+    else if ( isNextSubstring( charArrToStr( TEXT_TokenLogicalOperOR  ))) return ( LogicalOper::Or );
+    else return ( LogicalOper::Unknown );
 }
 
 //
@@ -557,7 +554,7 @@ wstring ConstraintsTokenizer::getParameterName()
     // look for opening marker
     if ( ! ( isNextSubstring( charArrToStr( TEXT_TokenParameterNameOpen ))))
     {
-        throw CSyntaxError( SyntaxErrType_NoParameterNameOpen, _currentPosition );
+        throw CSyntaxError( SyntaxErrorType::NoParameterNameOpen, _currentPosition );
     }
 
     // retrive text
@@ -566,7 +563,7 @@ wstring ConstraintsTokenizer::getParameterName()
     // look for closing marker
     if ( ! isNextSubstring( charArrToStr( TEXT_TokenParameterNameClose )))
     {
-        throw CSyntaxError( SyntaxErrType_NoParameterNameClose, _currentPosition );
+        throw CSyntaxError( SyntaxErrorType::NoParameterNameClose, _currentPosition );
     }
 
     return( name );
@@ -590,7 +587,7 @@ double ConstraintsTokenizer::getNumber()
 
     if (ist.rdstate() & ios::failbit)
     {
-        throw CSyntaxError( SyntaxErrType_NotNumericValue, _currentPosition );
+        throw CSyntaxError( SyntaxErrorType::NotNumericValue, _currentPosition );
     }
 
     // success, update current cursor position
@@ -634,7 +631,7 @@ wstring ConstraintsTokenizer::getString( IN const wstring& terminator )
             {
                 if( nextChar == specialChar ) found = true;
             }
-            if( !found ) throw CSyntaxError( SyntaxErrType_UnknownSpecialChar, _currentPosition );
+            if( !found ) throw CSyntaxError( SyntaxErrorType::UnknownSpecialChar, _currentPosition );
 
             // found a special character; append to resulting string in literal form
             ret += nextChar;
@@ -673,7 +670,7 @@ void ConstraintsTokenizer::skipWhiteChars()
     // other errors should be thrown to callers
     catch ( CSyntaxError e )
     {
-        if ( SyntaxErrType_UnexpectedEndOfString != e.Type )
+        if ( SyntaxErrorType::UnexpectedEndOfString != e.Type )
         {
             throw e;
         }
@@ -688,7 +685,7 @@ wchar_t ConstraintsTokenizer::peekNextChar()
 {
     if ( _currentPosition >= _constraintsText.end() )
     {
-        throw CSyntaxError( SyntaxErrType_UnexpectedEndOfString, _currentPosition );
+        throw CSyntaxError( SyntaxErrorType::UnexpectedEndOfString, _currentPosition );
     }
     return( *( _currentPosition++ ) );
 }
@@ -750,17 +747,17 @@ void ConstraintsTokenizer::doPostParseExpansions( IN OUT CTokenList& tokens )
     {
         switch( (*i_token)->Type )
         {
-        case TokenType_Function:
+        case TokenType::Function:
             {
             CFunction *function = (CFunction*) (*i_token)->Function;
 
-            if(( function->Type == FunctionTypeIsNegativeParam
-              || function->Type == FunctionTypeIsPositiveParam ) 
+            if(( function->Type == FunctionType::IsNegativeParam
+              || function->Type == FunctionType::IsPositiveParam ) 
               && function->DataText.empty() )
             {
                 // deallocate the current token
-                // we don't have to deallocate Data because in this case it is always NULL
-                assert( function->Data == NULL );
+                // we don't have to deallocate Data because in this case it is always "nullptr"
+                assert( function->Data == nullptr );
 
                 // save positionInText and rawText and reuse it in all new tokens
                 wstring::iterator oldPosInText = (*i_token)->PositionInText;
@@ -771,7 +768,7 @@ void ConstraintsTokenizer::doPostParseExpansions( IN OUT CTokenList& tokens )
                 i_token = tokens.erase( i_token );
                 
                 // (
-                CToken* newToken = new CToken( TokenType_ParenthesisOpen, oldPosInText );
+                CToken* newToken = new CToken( TokenType::ParenthesisOpen, oldPosInText );
                 tokens.insert( i_token, newToken );
 
                 for( CParameters::iterator i_param =  _model.Parameters.begin();
@@ -783,20 +780,20 @@ void ConstraintsTokenizer::doPostParseExpansions( IN OUT CTokenList& tokens )
                     if( i_param != _model.Parameters.begin() )
                     {
                         // logical operator OR or AND
-                        newToken = new CToken( oldType == FunctionTypeIsNegativeParam ? LogicalOper_OR : LogicalOper_AND,
+                        newToken = new CToken( oldType == FunctionType::IsNegativeParam ? LogicalOper::Or : LogicalOper::And,
                                                oldPosInText );
                         tokens.insert( i_token, newToken );                    
                     }
 
                     // IsNegative(param) / IsPositive(param)
-                    CFunction* newFunction = new CFunction( oldType, FunctionDataType_Parameter,
+                    CFunction* newFunction = new CFunction( oldType, FunctionDataType::Parameter,
                                                             &*i_param, i_param->Name, oldRawText );
                     newToken = new CToken( newFunction, oldPosInText );
                     tokens.insert( i_token, newToken );
                 }
 
                 // )
-                newToken = new CToken( TokenType_ParenthesisClose, oldPosInText );
+                newToken = new CToken( TokenType::ParenthesisClose, oldPosInText );
                 tokens.insert( i_token, newToken );
             }
             else // it's not IsNegative() or IsPositive()

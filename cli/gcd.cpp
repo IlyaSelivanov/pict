@@ -1,7 +1,7 @@
 #include "gcd.h"
 using namespace std;
 
-#define FAILED(err) (ErrorCode_Success != (err))
+#define FAILED(err) (ErrorCode::ErrorCode_Success != (err))
 
 namespace pictcli_gcd
 {
@@ -14,12 +14,12 @@ ErrorCode GcdRunner::generateResults( IN CModelData& modelData, IN bool justNega
     // translate all data to gcd-readable format, build exclusions etc.
     CGcdData gcdData( modelData );
     ErrorCode err = gcdData.TranslateToGCD();
-    if( FAILED( err ) ) return( err );
+    if( FAILED( err )) return( err );
 
     // check if we excluded all values of any parameter; generation will return nothing if that's the case
     if( gcdData.CheckEntireParameterExcluded() )
     {
-        return( ErrorCode_BadConstraints );
+        return( ErrorCode::ErrorCode_BadConstraints );
     }
 
     // save all one-element exclusions, they'll be used for warnings later
@@ -36,13 +36,12 @@ ErrorCode GcdRunner::generateResults( IN CModelData& modelData, IN bool justNega
     model->SetRandomSeed( modelData.RandSeed );
     try
     {
-        bool hasChildren = false;
         for( auto & submodel : model->GetSubmodels() )
         {
             // each submodel may assign different order to parameters
-            if( !gcdData.FixParamOrder( submodel ) )
+            if( !gcdData.FixParamOrder( submodel ))
             {
-                return( ErrorCode_BadModel );
+                return( ErrorCode::ErrorCode_BadModel );
             }
 
             if( modelData.Verbose )
@@ -51,15 +50,14 @@ ErrorCode GcdRunner::generateResults( IN CModelData& modelData, IN bool justNega
             }
 
             submodel->Generate();
-            hasChildren = true;
-
+        
             modelData.AddToTotalCombinationsCount( submodel->GetTotalCombinationsCount() );
             modelData.AddToRemainingCombinationsCount( submodel->GetRemainingCombinationsCount() );
         }
 
-        if( !gcdData.FixParamOrder( model ) )
+        if( !gcdData.FixParamOrder( model ))
         {
-            return( ErrorCode_BadModel );
+            return( ErrorCode::ErrorCode_BadModel );
         }
 
         if( modelData.Verbose )
@@ -81,29 +79,29 @@ ErrorCode GcdRunner::generateResults( IN CModelData& modelData, IN bool justNega
     {
         switch( e.GetErrorType() )
         {
-        case OutOfMemory:
+        case ErrorType::OutOfMemory:
             PrintMessage( GcdError, L"Out of memory. Use smaller /o or simplify your model." );
             break;
-        case GenerationCancelled: // not used in PICT.EXE
-        case TooManyRows:         // not used in PICT.EXE
-        case Unknown:
-        case GenerationFailure:
+        case ErrorType::GenerationCancelled: // not used in PICT.EXE
+        case ErrorType::TooManyRows:         // not used in PICT.EXE
+        case ErrorType::Unknown:
+        case ErrorType::GenerationFailure:
             wstring msg = L"Internal error\n";
             msg += L"As a workaround run the tool with parameter /r a few times and see if any of the iterations produces a result.\n";
             msg += L"If the result is produced, it is guaranteed to be valid and it is safe to use.";
-            PrintMessage( GcdError, (wchar_t*) msg.data() );
+            PrintMessage( GcdError, msg.data() );
             break;
         }
 #ifdef _DEBUG
         assert( false );
         throw;
 #endif
-        return( ErrorCode_GenerationError );
+        return( ErrorCode::ErrorCode_GenerationError );
     }
 
     translateResults( modelData, model->GetResults(), justNegative );
 
-    return( ErrorCode_Success );
+    return( ErrorCode::ErrorCode_Success );
 }
 
 //
@@ -142,7 +140,7 @@ void GcdRunner::translateResults( IN CModelData&       modelData,
             decoratedRowText.push_back( decoratedName );
         }
 
-        if( !justNegative || ( justNegative && isNegativeTestCase ) )
+        if( !justNegative || ( justNegative && isNegativeTestCase ))
         {
             CRow testCase( rowText, decoratedRowText, isNegativeTestCase );
             _result.TestCases.push_back( testCase );
@@ -167,7 +165,7 @@ ErrorCode GcdRunner::Generate()
     }
 
     ErrorCode err = generateResults( _modelData, false );
-    if( FAILED( err ) ) return( err );
+    if( FAILED( err )) return( err );
 
     // the "negative" run; only if any negative values exist
     if( modelData2.HasNegativeValues() )
@@ -179,10 +177,10 @@ ErrorCode GcdRunner::Generate()
         _result.SingleItemExclusions.clear();
 
         err = generateResults( modelData2, true );
-        if( FAILED( err ) ) return( err );
+        if( FAILED( err )) return( err );
     }
 
-    return( ErrorCode_Success );
+    return( ErrorCode::ErrorCode_Success );
 }
 
 }

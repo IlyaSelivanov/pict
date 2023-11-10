@@ -1,7 +1,9 @@
 #pragma once
+#ifdef _MSC_VER
 #pragma warning(disable:4511)
 #pragma warning(disable:4512)
 #pragma warning(disable:4239)
+#endif
 
 #include <vector>
 #include <string>
@@ -132,7 +134,7 @@ enum ComboStatus
     Excluded
 };
 
-enum GenerationType
+enum class GenerationType
 {
     MixedOrder,
     FixedOrder,
@@ -141,14 +143,14 @@ enum GenerationType
     Random
 };
 
-enum GenerationMode
+enum class GenerationMode
 {
     Regular,      // regular, no shortcuts, all pairs covered, can be slow
     Preview,      // only a few test cases, most pairs *not* covered, very fast
     Approximate   // most pairs covered, can return no results
 };
 
-enum ErrorType
+enum class ErrorType
 {
     GenerationCancelled,
     TooManyRows,
@@ -161,15 +163,13 @@ class GenerationError
 {
 public:
 
-    GenerationError( std::string file, int line, ErrorType err = Unknown ) :
-        _file( file ), _line( line ), _err( err ){}
+    GenerationError( std::string, int, ErrorType err = ErrorType::Unknown ) :
+        _err( err ){}
 
     ErrorType GetErrorType() { return (ErrorType) _err; }
 
 private:
     ErrorType    _err;
-    std::string  _file;
-    int          _line;
 };
 
 //
@@ -268,7 +268,7 @@ public:
     }
 
     // for inserter() to work we need two-param insert
-    iterator insert( iterator pos, const ExclusionTerm& Term )
+    iterator insert( iterator, const ExclusionTerm& Term )
     {
         return insert( Term ).first;
     }
@@ -314,7 +314,7 @@ public:
     int  Bind( int val, WorkList& worklist );
     int  AddBinding();
     int  GetBoundCount() const { return m_boundCount; }
-    bool IsFullyBound()  const { return m_boundCount == m_params.size(); }
+    bool IsFullyBound()  const { return m_boundCount == static_cast<int>(m_params.size()); }
 
     void        SetOpen   ( int n );
     bool        IsOpen    ( int n ) const { return OPEN     == m_bitvec[ n ]; }
@@ -373,8 +373,9 @@ class Parameter
 {
 public:
     Parameter( int order, int sequence, int valueCount, std::wstring name, bool expectedResultParam ) :
-        m_order( order ), m_sequence( sequence ), m_valueCount( valueCount ),
-        m_name( name ), m_expResultParam( expectedResultParam ), m_valueWeights( 0 )
+        m_name( name ), m_order( order ), m_sequence( sequence ), m_valueCount( valueCount ),
+        m_expResultParam( expectedResultParam ), m_bound( false ),
+        m_pending( false ), m_valueWeights( 0 ), m_avgExclusionSize( 0 )
     {
          // result params must have order = 1
         if ( m_expResultParam ) m_order = 1;
@@ -447,8 +448,8 @@ public:
     size_t GetLast()  { return  m_currentValue; }
     ParamResult& GetTempResults() { return m_result; }
 
-    virtual Model*           GetModel()      { return NULL; }
-    virtual ParamCollection* GetComponents() { return NULL; }
+    virtual Model*           GetModel()      { return nullptr; }
+    virtual ParamCollection* GetComponents() { return nullptr; }
 
     void CleanUp();
 
@@ -456,11 +457,11 @@ protected:
     std::wstring m_name;
 
 private:
-    int    m_order;          // how many ways must this parameter combine?
-    int    m_sequence;       // input sequence number, so we can reorder but output in original order
-    size_t m_currentValue;   // current iteration's value cache
-    int    m_valueCount;     // how many values parameter has
-    bool   m_expResultParam; // is this a special, result inducing param
+    int    m_order;             // how many ways must this parameter combine?
+    int    m_sequence;          // input sequence number, so we can reorder but output in original order
+    size_t m_currentValue = 0;  // current iteration's value cache
+    int    m_valueCount;        // how many values parameter has
+    bool   m_expResultParam;    // is this a special, result inducing param
 
     bool m_bound;         // variable to use in iteration - is this bound yet?
     bool m_pending;       // have we put it on work list yet this iteration?
@@ -473,7 +474,7 @@ private:
 
     std::vector<int>      m_valueWeights;
 
-    Task*  m_task;
+    Task*  m_task = nullptr;
 
     float  m_avgExclusionSize;
 };
@@ -496,22 +497,11 @@ private:
 //
 //
 //
-struct MatchParameterPointer : public std::binary_function<ExclusionTerm, Parameter*, bool>
-{
-    bool operator()( const ExclusionTerm excl, Parameter* pParam ) const
-    {
-        return excl.first == pParam;
-    }
-};
-
-//
-//
-//
 class Model
 {
 public:
     Model( const std::wstring& id, GenerationType type, int order, long seed = 0 ) :
-        m_id( id ), m_generationType( type ), m_order( order ), m_maxRows( 0 ), m_lastParamId( UNDEFINED_ID + 1000 * 1000 ) {
+        m_id( id ), m_order( order ), m_maxRows( 0 ), m_generationType( type ), m_lastParamId( UNDEFINED_ID + 1000 * 1000 ) {
         SetRandomSeed( seed );
     }
     ~Model();
@@ -621,7 +611,6 @@ private:
 
     GenerationType m_generationType;
 
-    Parameter*   m_currentParam;
     unsigned int m_lastParamId;
     long         m_totalCombinations;
     long         m_remainingCombinations;
@@ -696,7 +685,7 @@ public:
     ExclusionCollection& GetExclusions() { return( m_exclusions ); }
     RowSeedCollection&   GetRowSeeds()   { return( m_rowSeeds ); }
 
-    bool AbortGeneration() { return( ( NULL == m_abortCallback ) ? false : m_abortCallback() ); }
+    bool AbortGeneration() { return( ( nullptr == m_abortCallback ) ? false : m_abortCallback() ); }
 
     void SetGenerationMode( GenerationMode mode ) { m_generationMode = mode; }
     GenerationMode GetGenerationMode() { return( m_generationMode ); }
@@ -728,7 +717,7 @@ private:
     void deriveExclusions();
 
     // a global workspace shared by multiple objects
-    int* m_workbuf = NULL;
+    int* m_workbuf = nullptr;
 
     // result row pointer allows C-style API to implement GetNextResultRow function
     // i.e. get one result row at a time

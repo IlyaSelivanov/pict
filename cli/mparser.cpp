@@ -106,7 +106,7 @@ bool readLineFromFile( wifstream& file, wstring& line )
         file.get( c );
         if( file.eof()
          || c == L'\n'
-         || c == 0 ) return( true );
+         || c == L'\0' ) return( true );
         line += c;
     }
     return( true );
@@ -127,14 +127,14 @@ bool CModelData::readParameter( wstring& line )
         paramSep = line.find( ValuesDelim );
         if( paramSep == wstring::npos )
         {
-            PrintMessage( InputDataError, L"Parameter", (wchar_t*) line.c_str(), L"should have at least one value defined" );
+            PrintMessage( InputDataError, L"Parameter", line.c_str(), L"should have at least one value defined" );
             return( false );
         }
     }
 
     wstring name = trim( line.substr( 0, paramSep ));
     
-    unsigned int order = UNDEFINED_ORDER;
+    unsigned int order = static_cast<unsigned int>(UNDEFINED_ORDER);
     
     //check if this param has custom-order defined
     wstrings nameAndOrder;
@@ -193,7 +193,7 @@ bool CModelData::readParameter( wstring& line )
             size_t weightEnd   = i_val->find_last_of( WEIGHT_END );
             
             // '(' must exist, ')' must be the last character
-            if ( weightBegin != -1 && weightEnd == i_val->length() - 1 ) 
+            if ( weightBegin != wstring::npos && weightEnd == i_val->length() - 1 )
             {
                 wstring weightStr = trim( i_val->substr( weightBegin + 1, weightEnd - weightBegin - 1 ));
                 double weightDbl = 0;
@@ -286,7 +286,7 @@ bool CModelData::readParamSet( wstring& line )
     wstring::iterator begin = findFirstNonWhitespace( next, line.end() );
     if( begin == line.end() || *begin != SET_BEGIN )
     {
-        PrintMessage( InputDataError, (wchar_t*) STD_MSG.data() );
+        PrintMessage( InputDataError, STD_MSG.data() );
         return( false );
     }
     ++begin;
@@ -296,7 +296,7 @@ bool CModelData::readParamSet( wstring& line )
     end = find( begin, line.end(), SET_END );
     if ( end == line.end() )
     {
-        PrintMessage( InputDataError, (wchar_t*) STD_MSG.data() );
+        PrintMessage( InputDataError, STD_MSG.data() );
         return( false );
     }
 
@@ -306,7 +306,7 @@ bool CModelData::readParamSet( wstring& line )
     setp = trim( setp );
     if ( setp.empty() )
     {
-        PrintMessage( InputDataError, (wchar_t*) STD_MSG.data() );
+        PrintMessage( InputDataError, STD_MSG.data() );
         return( false );
     }
 
@@ -335,7 +335,7 @@ bool CModelData::readParamSet( wstring& line )
         getUnmatchedParameterNames( setParams, unmatched );
         if( !unmatched.empty() )
         {
-            PrintMessage( InputDataWarning, L"Submodel defintion", (wchar_t*) trim( line ).data(), L"contains unknown parameter. Skipping..." );
+            PrintMessage( InputDataWarning, L"Submodel defintion", trim( line ).data(), L"contains unknown parameter. Skipping..." );
             return( true ); // just a warning so don't exit
         }
     }
@@ -345,7 +345,7 @@ bool CModelData::readParamSet( wstring& line )
     wstrings::iterator newEnd = unique( setParams.begin(), setParams.end(), stringCaseInsensitiveEquals );
     if( setParams.end() != newEnd )
     {
-        PrintMessage( InputDataWarning, L"Submodel defintion", (wchar_t*) trim( line ).data(), L"contains duplicate parameters. Removing duplicates..." );
+        PrintMessage( InputDataWarning, L"Submodel defintion", trim( line ).data(), L"contains duplicate parameters. Removing duplicates..." );
         setParams.erase( newEnd, setParams.end() );
     }
 
@@ -366,7 +366,14 @@ bool CModelData::readParamSet( wstring& line )
             ++index;
         }
         // at this point we should always match the name
-        assert( found );
+        //
+        // N.B. putting a condition around an assert is superfluous but it is done here
+        //      because some compilers complain that 'found' variable is never used and
+        //      this is a cross-platform friendly way to suppress such warnings
+        if( !found )
+        {
+            assert( found );
+        }
 
         submodel.Parameters.push_back( index );
     }
@@ -378,7 +385,7 @@ bool CModelData::readParamSet( wstring& line )
     // anything other than @, quit
     if ( at != line.end() && *at != SET_ORDER )
     {
-        PrintMessage( InputDataError, (wchar_t*) STD_MSG.data() );
+        PrintMessage( InputDataError, STD_MSG.data() );
         return( false );
     }
 
@@ -410,7 +417,7 @@ bool CModelData::readParamSet( wstring& line )
         }
         if ( !ret )
         {
-            PrintMessage( InputDataError, (wchar_t*) STD_MSG.data() );
+            PrintMessage( InputDataError, STD_MSG.data() );
             return( false );
         }
 
@@ -429,10 +436,10 @@ bool CModelData::readModel( const wstring& filePath )
 {
     // Some implementations of wifstream only allow ANSI strings as file names so converting before using
     string ansiFilePath = wideCharToAnsi( filePath );
-    wifstream file( ansiFilePath.c_str() );
+    wifstream file( ansiFilePath );
     if ( !file )
     {
-        PrintMessage( InputDataError, L"Couldn't open file:", (wchar_t*)filePath.data() );
+        PrintMessage( InputDataError, L"Couldn't open file:", filePath.data() );
         return( false );
     }
 
@@ -452,7 +459,8 @@ bool CModelData::readModel( const wstring& filePath )
         if ( firstLine )
         {
             m_encoding = getEncodingType( line );
-            if ( m_encoding != ANSI && m_encoding != UTF8 )
+            if ( m_encoding != EncodingType::ANSI
+              && m_encoding != EncodingType::UTF8 )
             {
                 PrintMessage( InputDataError, L"Only ANSI and UTF-8 are supported" );
                 return( false );
@@ -529,10 +537,10 @@ bool CModelData::ReadRowSeedFile( const wstring& filePath )
 
     // Some implementations of wifstream only allow ANSI strings as file names so converting before using
     string ansiFilePath = wideCharToAnsi( filePath );
-    wifstream file( ansiFilePath.c_str() );
+    wifstream file( ansiFilePath );
     if ( !file )
     {
-        PrintMessage( InputDataError, L"Couldn't open file:", (wchar_t*)filePath.data() );
+        PrintMessage( InputDataError, L"Couldn't open file:", filePath.data() );
         return( false );
     }
     wstring line;
@@ -556,7 +564,8 @@ bool CModelData::ReadRowSeedFile( const wstring& filePath )
     }
 
     EncodingType encoding = getEncodingType( line );
-    if ( encoding != ANSI && encoding != UTF8 )
+    if ( encoding != EncodingType::ANSI
+      && encoding != EncodingType::UTF8 )
     {
         PrintMessage( RowSeedsError, L"Only ANSI and UTF-8 are supported" );
         return( false );
@@ -572,7 +581,7 @@ bool CModelData::ReadRowSeedFile( const wstring& filePath )
         if ( found == Parameters.end())
         {
             PrintMessage( RowSeedsWarning, L"Parameter", 
-                                           (wchar_t*) param.data(),
+                                           param.data(),
                                            L"not found in the model. Skipping..." );
         }
         parameters.push_back( found );
@@ -617,7 +626,7 @@ bool CModelData::ReadRowSeedFile( const wstring& filePath )
                     if ( ! i_value->empty() )
                     {
                         PrintMessage( RowSeedsWarning, L"Value", 
-                                                    (wchar_t*) i_value->data(),
+                                                    i_value->data(),
                                                     L"not found in the model. Skipping this value..." );
                     }
                 }

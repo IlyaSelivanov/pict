@@ -177,7 +177,7 @@ inline void ExclusionDeriver::buildExclusion( Exclusion& exclImplied, vector<Exc
     // derivation can take a long time, use the call back to check if it should be aborted
     if( m_task->AbortGeneration() )
     {
-        throw GenerationError( __FILE__, __LINE__, GenerationCancelled );
+        throw GenerationError( __FILE__, __LINE__, ErrorType::GenerationCancelled );
     }
 
     if( begin != m_end )
@@ -284,7 +284,7 @@ inline bool ExclusionDeriver::alreadyInCollection( Exclusion &excl )
 void ExclusionDeriver::DeriveExclusions()
 {
     // For preview generation we don't invoke the core of the deriver at all
-    if( m_task->GetGenerationMode() != Regular ) return;
+    if( m_task->GetGenerationMode() != GenerationMode::Regular ) return;
 
     DOUT( L"Exclusions:\n" );
     for( auto & exclusion : m_exclusions )
@@ -332,7 +332,9 @@ void ExclusionDeriver::DeriveExclusions()
             // put ref to each exclusion in appropriate value-relative bucket
             // find this parameter in the exclusion
             Exclusion::iterator iExcl = find_if( ( *ie )->begin(), ( *ie )->end(),
-                                                 bind2nd( MatchParameterPointer(), m_currentParam ) );
+                                                 [this](const ExclusionTerm et) {
+                                                     return et.first == m_currentParam;
+                                                 } );
 
             // put the exclusion in the right bucket
             assert( iExcl != ( *ie )->end() );

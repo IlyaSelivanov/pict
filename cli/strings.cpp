@@ -3,8 +3,9 @@
 #include <algorithm>
 #include <functional> 
 #include <cctype>
-#include <wchar.h>
-#include <assert.h>
+#include <cwchar>
+#include <cwctype>
+#include <cassert>
 #include "strings.h"
 using namespace std;
 
@@ -13,7 +14,10 @@ using namespace std;
 //
 wstring::iterator findFirstNonWhitespace( const wstring::iterator begin, const wstring::iterator end )
 {
-    return( find_if( begin, end, not1( ptr_fun<wint_t, int>( iswspace ) ) ) );
+    return( find_if( begin, end,
+                     [](const wint_t c) {
+                         return ! std::iswspace(c);
+                     } ) );
 }
 
 //
@@ -56,10 +60,18 @@ int stringCompare( const wstring& s1, const wstring& s2, bool caseSensitive )
 //
 //
 //
-wstring trim( wstring text)
+wstring trim( wstring text )
 {
-    text.erase( text.begin(), find_if( text.begin(), text.end(), not1( ptr_fun<wint_t, int>( iswspace ) ) ) );
-    text.erase( find_if( text.rbegin(), text.rend(), not1( ptr_fun<wint_t, int>( iswspace ) )).base(), text.end() );
+    text.erase( text.begin(),
+                find_if( text.begin(), text.end(),
+                         [](const wint_t c) {
+                             return ! std::iswspace(c);
+                         } ) );
+    text.erase( find_if( text.rbegin(), text.rend(),
+                         [](const wint_t c) {
+                             return ! std::iswspace(c);
+                         } ).base(),
+                text.end() );
     return text;
 }
 
@@ -224,7 +236,7 @@ wstring charToStr( wchar_t c )
 //
 //
 //
-wstring charArrToStr( wchar_t* c )
+wstring charArrToStr( const wchar_t* c )
 {
     return( wstring( c ) );
 }
@@ -249,56 +261,56 @@ string wideCharToAnsi( const wstring& text )
 EncodingType getEncodingType( wstring& text )
 {
     // UTF8
-    if (text.size() >= 3
+    if( text.size() >= 3
      && text[0] == (wchar_t)0xEF
      && text[1] == (wchar_t)0xBB
-     && text[2] == (wchar_t)0xBF)
+     && text[2] == (wchar_t)0xBF )
     {
-        text.erase(0, 3);
-        return(UTF8);
+        text.erase( 0, 3 );
+        return( EncodingType::UTF8 );
     }
 
     // UTF32_BigEndian
-    if (text.size() >= 4
+    if( text.size() >= 4
      && text[0] == (wchar_t)0x00
      && text[1] == (wchar_t)0x00
      && text[2] == (wchar_t)0xFE
-     && text[3] == (wchar_t)0xFF)
+     && text[3] == (wchar_t)0xFF )
     {
-        text.erase(0, 4);
-        return(UTF32_BigEndian);
+        text.erase( 0, 4 );
+        return( EncodingType::UTF32_BigEndian );
     }
 
     // UTF32_LittleEndian
-    if (text.size() >= 4
+    if( text.size() >= 4
      && text[0] == (wchar_t)0xFF
      && text[1] == (wchar_t)0xFE
      && text[2] == (wchar_t)0x00
-     && text[3] == (wchar_t)0x00)
+     && text[3] == (wchar_t)0x00 )
     {
-        text.erase(0, 4);
-        return(UTF32_LittleEndian);
+        text.erase( 0, 4 );
+        return( EncodingType::UTF32_LittleEndian );
     }
 
     // UTF16_BigEndian
-    if (text.size() >= 2
+    if( text.size() >= 2
      && text[0] == (wchar_t)0xFE
-     && text[1] == (wchar_t)0xFF)
+     && text[1] == (wchar_t)0xFF )
     {
-        text.erase(0, 2);
-        return(UTF16_BigEndian);
+        text.erase( 0, 2 );
+        return( EncodingType::UTF16_BigEndian );
     }
 
     // UTF16_LittleEndian
-    if (text.size() >= 2
+    if( text.size() >= 2
      && text[0] == (wchar_t)0xFF
-     && text[1] == (wchar_t)0xFE)
+     && text[1] == (wchar_t)0xFE )
     {
-        text.erase(0, 2);
-        return(UTF16_LittleEndian);
+        text.erase( 0, 2 );
+        return( EncodingType::UTF16_LittleEndian );
     }
 
-    return(ANSI);
+    return( EncodingType::ANSI );
 }
 
 //
@@ -310,32 +322,23 @@ void setEncodingType
     IN OUT wstring&     text
     )
 {
-    assert(text.empty());
+    assert( text.empty() );
 
-    switch (type)
+    switch( type )
     {
-    case ANSI:
+    case EncodingType::ANSI:
         break;
 
-    case UTF8:
+    case EncodingType::UTF8:
         text += (wchar_t)0xEF;
         text += (wchar_t)0xBB;
         text += (wchar_t)0xBF;
         break;
 
-    case UTF16_BigEndian:
-        assert(false);
-        break;
-
-    case UTF16_LittleEndian:
-        assert(false);
-        break;
-
-    case UTF32_BigEndian:
-        assert(false);
-        break;
-
-    case UTF32_LittleEndian:
+    case EncodingType::UTF16_BigEndian:
+    case EncodingType::UTF16_LittleEndian:
+    case EncodingType::UTF32_BigEndian:
+    case EncodingType::UTF32_LittleEndian:
         assert(false);
         break;
     }

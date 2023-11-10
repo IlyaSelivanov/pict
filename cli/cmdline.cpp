@@ -88,7 +88,7 @@ bool parseArg( wchar_t* text, CModelData& modelData )
     // every argument is at least two char long and first character is '/' or '-'
     if( wcslen( text ) < 2 || ( text[ 0 ] != L'/' && text[ 0 ] != L'-' ) )
     {
-        PrintMessage( InputDataError, (wchar_t*) UNKNOWN_OPTION_MSG, text );
+        PrintMessage( InputDataError, UNKNOWN_OPTION_MSG, text );
         return( false );
     }
 
@@ -100,7 +100,7 @@ bool parseArg( wchar_t* text, CModelData& modelData )
         wstring opt = L"'";
         opt += currentArg;
         opt += L"'";
-        PrintMessage( InputDataError, L"Option", (wchar_t*) opt.c_str(), L"was provided more than once" );
+        PrintMessage( InputDataError, L"Option", opt.c_str(), L"was provided more than once" );
         return( false );
     }
 
@@ -109,6 +109,12 @@ bool parseArg( wchar_t* text, CModelData& modelData )
     {
     case SWITCH_ORDER:
     {
+        // Handle the "max" special case.
+        if ( getStringFromArg( text ) == L"max" )
+        {
+            modelData.Order = MAXIMUM_ORDER;
+            break;
+        }
         unsigned int i = getUIntFromArg( text );
         if( i == 0 )
         {
@@ -175,7 +181,7 @@ bool parseArg( wchar_t* text, CModelData& modelData )
         // /r
         if( wcslen( text ) == 2 )
         {
-            modelData.RandSeed = (unsigned short) ( time( NULL ) );
+            modelData.RandSeed = (unsigned short) ( time( nullptr ) );
         }
         // /r:
         else if( wcslen( text ) == 3 )
@@ -234,7 +240,7 @@ bool parseArg( wchar_t* text, CModelData& modelData )
     {
         if( wcslen( text ) == 2 )
         {
-            modelData.GenerationMode = Preview;
+            modelData.GenerationMode = GenerationMode::Preview;
         }
         else
         {
@@ -248,7 +254,7 @@ bool parseArg( wchar_t* text, CModelData& modelData )
         // /x
         if( wcslen( text ) == 2 )
         {
-            modelData.GenerationMode = Approximate;
+            modelData.GenerationMode = GenerationMode::Approximate;
         }
         // /x:
         else if( wcslen( text ) == 3 )
@@ -260,8 +266,21 @@ bool parseArg( wchar_t* text, CModelData& modelData )
         else
         {
             unsigned int i = getUIntFromArg( text );
-            modelData.GenerationMode = Approximate;
+            modelData.GenerationMode = GenerationMode::Approximate;
             modelData.MaxApproxTries = (unsigned short) i;
+        }
+        break;
+    }
+    case SWITCH_FORMAT:
+    {
+        wstring format = getStringFromArg( text );
+        if( format == L"json" || format == L"text" )
+        {
+            modelData.Format = format;
+        }
+        else
+        {
+            unknownOption = true;
         }
         break;
     }
@@ -274,7 +293,7 @@ bool parseArg( wchar_t* text, CModelData& modelData )
 
     if( unknownOption )
     {
-        PrintMessage( InputDataError, (wchar_t*) UNKNOWN_OPTION_MSG, text );
+        PrintMessage( InputDataError, UNKNOWN_OPTION_MSG, text );
         return( false );
     }
     else
@@ -293,14 +312,15 @@ void showUsage()
     wcout << L"Pairwise Independent Combinatorial Testing" << endl << endl;
     wcout << L"Usage: pict model [options]"                << endl << endl;
     wcout << L"Options:" << endl;
-    wcout << L" /" << charToStr( SWITCH_ORDER )             << L":N    - Order of combinations (default: 2)" << endl;
-    wcout << L" /" << charToStr( SWITCH_DELIMITER )         << L":C    - Separator for values  (default: ,)" << endl;
-    wcout << L" /" << charToStr( SWITCH_ALIAS_DELIMITER )   << L":C    - Separator for aliases (default: |)" << endl;
-    wcout << L" /" << charToStr( SWITCH_NEGATIVE_VALUES )   << L":C    - Negative value prefix (default: ~)" << endl;
-    wcout << L" /" << charToStr( SWITCH_SEED_FILE )         << L":file - File with seeding rows"             << endl;
-    wcout << L" /" << charToStr( SWITCH_RANDOMIZE )         << L"[:N]  - Randomize generation, N - seed"     << endl;
-    wcout << L" /" << charToStr( SWITCH_CASE_SENSITIVE )    << L"      - Case-sensitive model evaluation"    << endl;
-    wcout << L" /" << charToStr( SWITCH_STATISTICS )        << L"      - Show model statistics"              << endl;
+    wcout << L" /" << charToStr( SWITCH_ORDER )             << L":N|max         - Order of combinations (default: 2)" << endl;
+    wcout << L" /" << charToStr( SWITCH_DELIMITER )         << L":C             - Separator for values  (default: ,)" << endl;
+    wcout << L" /" << charToStr( SWITCH_ALIAS_DELIMITER )   << L":C             - Separator for aliases (default: |)" << endl;
+    wcout << L" /" << charToStr( SWITCH_NEGATIVE_VALUES )   << L":C             - Negative value prefix (default: ~)" << endl;
+    wcout << L" /" << charToStr( SWITCH_SEED_FILE )         << L":file          - File with seeding rows"             << endl;
+    wcout << L" /" << charToStr( SWITCH_RANDOMIZE )         << L"[:N]           - Randomize generation, N - seed"     << endl;
+    wcout << L" /" << charToStr( SWITCH_FORMAT )            << L"[:text|json]   - Output format (default: text)"      << endl;
+    wcout << L" /" << charToStr( SWITCH_CASE_SENSITIVE )    << L"               - Case-sensitive model evaluation"    << endl;
+    wcout << L" /" << charToStr( SWITCH_STATISTICS )        << L"               - Show model statistics"              << endl;
     // there are hidden parameters:
     // wcout << L" /x  - Approximate generation (best effort, might not cover all combinations)" << endl;
     // wcout << L" /p  - Preview generation (only a few test cases)"                             << endl;

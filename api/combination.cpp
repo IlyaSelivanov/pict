@@ -91,7 +91,7 @@ int Combination::Feasible()
     int zeros = 0;
     for( int i = 0; i < nWorkVals; ++i )
     {
-        if( Open == m_bitvec[ workbuf[ i ] ] )
+        if( ComboStatus::Open == m_bitvec[ workbuf[ i ] ] )
         {
             ++zeros;
         }
@@ -107,14 +107,15 @@ ComboStatus Combination::Feasible( int value )
 {
     if( EXCLUDED == m_bitvec[ value ] )
     {
-        return Excluded;
+        return ComboStatus::Excluded;
     }
-    ComboStatus retval = ( COVERED == m_bitvec[ value ] ) ? CoveredMatch : Open;
+    ComboStatus retval = ( COVERED == m_bitvec[ value ] ) ? ComboStatus::CoveredMatch : ComboStatus::Open;
     for( ParamCollection::reverse_iterator iter = m_params.rbegin(); iter != m_params.rend(); ++iter )
     {
-        if( ( *iter )->GetBoundCount() && ( *iter )->GetLast() != value % ( *iter )->GetValueCount() )
+        if( ( *iter )->GetBoundCount() && 
+            static_cast<int>(( *iter )->GetLast()) != value % ( *iter )->GetValueCount() )
         {
-            return Excluded;
+            return ComboStatus::Excluded;
         }
         value /= ( *iter )->GetValueCount();
     }
@@ -143,7 +144,7 @@ int Combination::Weight( int value )
 //
 int Combination::AddBinding()
 {
-    if( ++m_boundCount == m_params.size() )
+    if( ++m_boundCount == static_cast<int>(m_params.size()) )
     {
         // compute which zero we're setting
         size_t value = 0;
@@ -190,7 +191,9 @@ void Combination::applyExclusion( Exclusion& excl, int index, ParamCollection::i
         // Is *pos a parameter in the exclusion?
         Exclusion::iterator ie = find_if( excl.begin(),
                                           excl.end(),
-                                          bind2nd( MatchParameterPointer(), *pos ) );
+                                          [pos](const ExclusionTerm et) {
+                                              return et.first == *pos;
+                                          } );
         // parameter is bound to a value in the exclusion
         if( excl.end() != ie )
         {
@@ -259,7 +262,7 @@ void Combination::SetOpen( int index )
 //
 //
 Combination::Combination( Model *M ) :
-    m_bitvec( NULL ), m_openCount( 0 ), m_boundCount( 0 ), m_range( 0 ), m_model( M )
+    m_bitvec( nullptr ), m_range( 0 ), m_openCount( 0 ), m_boundCount( 0 ), m_model( M )
 {
     m_id = ++m_lastUsedId;
     DOUT( L"Combination created: " << m_id << endl );
@@ -271,7 +274,7 @@ Combination::Combination( Model *M ) :
 Combination::~Combination()
 {
     DOUT( L"Combination deleted: " << m_id << endl );
-    if( NULL != m_bitvec ) delete[] m_bitvec;
+    if( nullptr != m_bitvec ) delete[] m_bitvec;
 }
 
 //

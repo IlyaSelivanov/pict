@@ -10,7 +10,7 @@ namespace pictcli_gcd
 //
 //
 //
-enum ErrorCode
+enum class ErrorCode
 {
     ErrorCode_Success         = 0x00,
     ErrorCode_OutOfMemory     = 0x01,
@@ -51,6 +51,7 @@ public:
     wstrings            SolverWarnings;
 
     void PrintOutput( CModelData& modelData, std::wostream& wout );
+    void PrintOutputJson( CModelData& modelData, std::wostream& wout );
     void PrintConstraintWarnings();
     void PrintStatistics();
 };

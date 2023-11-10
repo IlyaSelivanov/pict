@@ -18,19 +18,23 @@ There are thousands of possible combinations of these values. It would be  diffi
 
 # More information
 
-See **[doc/pict.md](https://github.com/Microsoft/pict/blob/master/doc/pict.md)** for detailed documentation on PICT and http://pairwise.org has details on this testing methododology. 
+See **[doc/pict.md](https://github.com/Microsoft/pict/blob/main/doc/pict.md)** for detailed documentation on PICT and http://pairwise.org has details on this testing methododology. 
+
+The most recent **pict.exe** is available at https://github.com/microsoft/pict/releases/.
 
 # Contributing
 
-PICT consists of three projects:
- * The generator engine,
- * Console PICT.EXE client of the engine,
- * A sample of how the engine API can be used in other projects.
+PICT consists of the following projects:
+ * **api**: The core combinatorial engine,
+ * **cli**: PICT.EXE command-line tool,
+ * **clidll**: PICT.EXE client repackaged as a Windows DLL to be used in-proc,
+ * **api-usage**: A sample of how the engine API can be used,
+ * **clidll-usage**: A sample of how the PICT DLL is to be used.
 
 ## Building and testing on Windows with MsBuild
-Use **pict.sln** to open the solution in Visual Studio 2015. You will need VC++ tools installed.
+Use **pict.sln** to open the solution in Visual Studio 2022. You will need VC++ build tools installed. See https://www.visualstudio.com/downloads/ for details.
 
-PICT uses MsBuild for building. **_build.cmd** script in the root directory will build both Debug and Release from the command-line (relies on compilers brought in by VS2015).
+PICT uses MsBuild for building. **_build.cmd** script in the root directory will build both Debug and Release from the command-line.
 
 The **test** folder contains all that is necessary to test PICT. You need Perl to run the tests. **_test.cmd** is the script that does it all.
 
@@ -38,10 +42,30 @@ The test script produces a log: **dbg.log** or **rel.log** for the Debug and Rel
 
 >There are tests which randomize output which typically make it different on each run. These results should be masked in the baseline but currently aren't.
 
-## Building with clang++ on Linux, OS/X, *BSD, etc
-Install clang through your package manager (most systems), Xcode (OS/X), or from the [LLVM website](http://llvm.org/releases/).
-On Linux, you also need to install recent libstdc++ offered by gcc 5.
+## Building on Linux, OS/X, *BSD, etc.
+PICT uses CMake to build on Linux.
+Assuming installation of CMake and C++ toolchain, following set of commands will build and run tests in the directory `build`
+```
+> cmake -DCMAKE_BUILD_TYPE=Release -S . -B build
+> cmake --build build
+> pushd build && ctest -v && popd
+```
 
-Run `make` to build the `pict` binary.
+## Debugging
 
-Run `make test` to run the tests as described above (requires Perl).
+Most commonly, you will want to debug the command-line tool. Start in the **pictcli** project, **cli/pict.cpp** file. You'll find **wmain** routine there which would be a convenient place to put the very first breakpoint.
+
+## PICT as a container
+
+To build a container image with PICT, just execute
+
+    make image-build
+
+Once built, you can run it with a sample model as follows
+
+    make image-run
+
+To use your own models, please execute
+
+    podman run -it --rm -v ./<local-dir>:/var/pict:Z pict:latest <your-model-file> [<pict-options>]
+

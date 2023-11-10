@@ -5,6 +5,8 @@
 
 #include <ctime>
 #include <cstring>
+#include <locale>
+#include <stdexcept>
 using namespace std;
 
 #include "cmdline.h"
@@ -44,34 +46,34 @@ int __cdecl execute
     IN OUT wstring& output
     )
 {
-    time_t start = time( NULL );
+    time_t start = time( nullptr );
 
     CModelData modelData;
 
     if( !ParseArgs( argc, args, modelData ) )
     {
-        return( ErrorCode_BadOption );
+        return( (int)ErrorCode::ErrorCode_BadOption );
     }
 
     if( !modelData.ReadModel( wstring( args[ 1 ] )))
     {
-        return( ErrorCode_BadModel );
+        return( (int)ErrorCode::ErrorCode_BadModel );
     }
 
     if( !modelData.ReadRowSeedFile( modelData.RowSeedsFile ))
     {
-        return( ErrorCode_BadRowSeedFile );
+        return( (int)ErrorCode::ErrorCode_BadRowSeedFile );
     }
 
     GcdRunner gcdRunner( modelData );
 
     ErrorCode err = gcdRunner.Generate();
-    if( err != ErrorCode_Success )
+    if( err != ErrorCode::ErrorCode_Success )
     {
-        return err;
+        return (int)err;
     }
 
-    time_t end = time( NULL );
+    time_t end = time( nullptr );
 
     // if r has been provided then print out the seed
     // TODO: change to not use SWITCH_RANDOMIZE const
@@ -94,11 +96,18 @@ int __cdecl execute
         result.PrintConstraintWarnings();
 
         wostringstream outputStream;
-        result.PrintOutput( modelData, outputStream );
+        if( modelData.Format == L"json" )
+        {
+            result.PrintOutputJson( modelData, outputStream );
+        }
+        else
+        {
+            result.PrintOutput( modelData, outputStream );
+        }
         output.append( outputStream.str() );
     }
 
-    return( ErrorCode_Success );
+    return( (int)ErrorCode::ErrorCode_Success );
 }
 
 //
@@ -128,6 +137,19 @@ int main
     IN char* args[]
     )
 {
+    // Use "C.UTF-8" locale for multi-byte character I/O everywhare
+    // If "C.UTF-8" locale is not supported, use classic "C" locale as fallback.
+    std::locale loc;
+    try
+    {
+        loc = std::locale("C.UTF-8");
+    }
+    catch ( const std::runtime_error&)
+    {
+        loc = std::locale::classic();
+    }
+    std::locale::global(loc);
+
     // convert all args to wchar_t's
     wchar_t** wargs = new wchar_t*[ argc ];
     for ( int ii = 0; ii < argc; ++ii )
@@ -148,9 +170,9 @@ int main
     // clean up
     for ( int ii = 0; ii < argc; ++ii )
     {
-        delete wargs[ ii ];
+        delete[] wargs[ ii ];
     }
-    delete wargs;
+    delete[] wargs;
 
     return( ret );
 }

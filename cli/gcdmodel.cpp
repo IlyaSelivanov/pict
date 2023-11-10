@@ -1,5 +1,3 @@
-#pragma once
-
 #include "cmdline.h"
 #include "gcdexcl.h"
 #include "gcdmodel.h"
@@ -41,7 +39,7 @@ bool CGcdData::CheckEntireParameterExcluded()
 
             wstring param = L"'" + found->Name + L"'";
             PrintMessage( InputDataError, L"Too restrictive constraints. All values of parameter",
-                          (wchar_t*) param.c_str(), L"got excluded." );
+                          param.c_str(), L"got excluded." );
             return( true );
         }
     }
@@ -116,10 +114,10 @@ bool CGcdData::FixParamOrder( IN Model* submodel )
             {
                 auto p = _modelData.FindParameterByGcdPointer( param );
                 assert( p != _modelData.Parameters.end() );
-                if( p->Order != UNDEFINED_ORDER )
+                if( p->Order != static_cast<unsigned int>(UNDEFINED_ORDER) )
                 {
                     // TODO: add verification of Order
-                    // if p->Order > model->parmeters.count - model.ResultParameters.count then error out
+                    // if p->Order > model->parameters.count - model.ResultParameters.count then error out
                     param->SetOrder( p->Order );
                 }
                 else
@@ -143,12 +141,12 @@ typedef map< CModelParameter*, Parameter* > CParamMap;
 //
 ErrorCode CGcdData::TranslateToGCD()
 {
-    Model* rootModel = new Model( L"", MixedOrder, _modelData.Order, _modelData.RandSeed );
+    Model* rootModel = new Model( L"", GenerationType::MixedOrder, _modelData.Order, _modelData.RandSeed );
     Models.push_back( rootModel );
 
     _task.SetRootModel( rootModel );
     _task.SetGenerationMode( _modelData.GenerationMode );
-    if( _modelData.GenerationMode == Approximate )
+    if( _modelData.GenerationMode == GenerationMode::Approximate )
     {
         _task.SetMaxRandomTries( _modelData.MaxApproxTries );
     }
@@ -164,7 +162,8 @@ ErrorCode CGcdData::TranslateToGCD()
     {
         CModelParameter& param = _modelData.Parameters[ index ];
 
-        Parameter* gcdParam = new Parameter( UNDEFINED_ORDER, index, static_cast<int>( param.Values.size() ),
+        Parameter* gcdParam = new Parameter( UNDEFINED_ORDER, static_cast<int>(index),
+                                             static_cast<int>( param.Values.size() ),
                                              param.Name, param.IsResultParameter );
 
         // find out and assign weights to values
@@ -190,7 +189,7 @@ ErrorCode CGcdData::TranslateToGCD()
     // now go through all the submodels and wire up parameters to models
     for( auto & submodel : _modelData.Submodels )
     {
-        Model* gcdModel = new Model( L"", MixedOrder, submodel.Order, _modelData.RandSeed );
+        Model* gcdModel = new Model( L"", GenerationType::MixedOrder, submodel.Order, _modelData.RandSeed );
         Models.push_back( gcdModel );
 
         for( auto & idx_param : submodel.Parameters )
@@ -231,7 +230,7 @@ ErrorCode CGcdData::TranslateToGCD()
                     continue;
                 }
 
-                Model* subModel = new Model( L"", MixedOrder, 1, _modelData.RandSeed );
+                Model* subModel = new Model( L"", GenerationType::MixedOrder, 1, _modelData.RandSeed );
                 Models.push_back( subModel );
                 rootModel->AddSubmodel( subModel );
 
@@ -268,7 +267,7 @@ ErrorCode CGcdData::TranslateToGCD()
     // make sure all order fields in models are set appropriately
     if( !fixModelAndSubmodelOrder() )
     {
-        return( ErrorCode_BadModel );
+        return( ErrorCode::ErrorCode_BadModel );
     }
     
     // add exclusions for negative values
@@ -280,7 +279,7 @@ ErrorCode CGcdData::TranslateToGCD()
     ConstraintsInterpreter interpreter( _modelData, Parameters );
     if( !interpreter.ConvertToExclusions( Exclusions ) )
     {
-        return( ErrorCode_BadConstraints );
+        return( ErrorCode::ErrorCode_BadConstraints );
     }
     _constraintWarnings.assign( interpreter.GetWarnings().begin(), interpreter.GetWarnings().end() );
 
@@ -310,7 +309,7 @@ ErrorCode CGcdData::TranslateToGCD()
         PrintGcdExclusions();
     }
 
-    return( ErrorCode_Success );
+    return( ErrorCode::ErrorCode_Success );
 }
 
 //
@@ -376,6 +375,43 @@ void CResult::PrintOutput( CModelData& modelData, wostream& wout )
 //
 //
 //
+void CResult::PrintOutputJson( CModelData& modelData, wostream& wout )
+{
+    wstring encodingPrefix;
+    setEncodingType( modelData.GetEncoding(), encodingPrefix );
+    wout << encodingPrefix;
+
+    wout << "[" << endl;
+    size_t testCasesSize = TestCases.size();
+    for( size_t i = 0; i < testCasesSize; i++ )
+    {
+        wout << "  [" << endl;
+        size_t valuesSize = TestCases[i].Values.size();
+        for( size_t j = 0; j < valuesSize; j++ )
+        {
+            wout << "    {" << endl;
+            wout << "    " << "  \"key\": \"" << modelData.Parameters[j].Name << "\"," << endl;
+            wout << "    " << "  \"value\": \"" << TestCases[i].Values[j] << "\"" << endl;
+            wout << "    }";
+            if( j < valuesSize - 1 )
+            {
+                wout << ",";
+            }
+            wout << endl;
+        }
+        wout << "  ]";
+        if( i < testCasesSize - 1 )
+        {
+            wout << ",";
+        }
+        wout << endl;
+    }
+    wout << "]" << endl;
+}
+
+//
+//
+//
 void CResult::PrintConstraintWarnings()
 {
     if( SingleItemExclusions.size() > 0 )
@@ -385,12 +421,12 @@ void CResult::PrintConstraintWarnings()
         {
             text += L"\n  " + item;
         }
-        PrintMessage( ConstraintsWarning, (wchar_t*) text.c_str() );
+        PrintMessage( ConstraintsWarning, text.c_str() );
     }
 
     for( auto & warn : SolverWarnings )
     {
-        PrintMessage( ConstraintsWarning, (wchar_t*) warn.c_str() );
+        PrintMessage( ConstraintsWarning, warn.c_str() );
     }
 }
 
@@ -404,11 +440,13 @@ void CResult::PrintStatistics()
 }
 
 //
-// figures out order for all model elements with UNDEFINED_ORDER
+// Figure out order for all model elements with UNDEFINED_ORDER or for
+// root model with MAXIMUM_ORDER.
 //
 bool CGcdData::fixModelAndSubmodelOrder()
 {
-    if( _modelData.Order < 1 )
+    if( _modelData.Order < 1 
+     && _modelData.Order != UNDEFINED_ORDER )
     {
         PrintMessage( InputDataError, L"Order cannot be smaller than 1" );
         return( false );
@@ -416,14 +454,17 @@ bool CGcdData::fixModelAndSubmodelOrder()
 
     Model* rootModel = _task.GetRootModel();
 
-    // If the order given as arg to the program has not been explicitely defined it defaults to 2
-    // If there's only one parameter or submodel in the model, the order of 2 will fail to execute
-    // To aviod this, must switch to lower order behind the scenes
+    // If the order given as an argument to the program has not been
+    // explicitly defined it defaults to 2; if it's been provided but
+    // given the "max" value, it defaults to MAXIMUM_ORDER. In both
+    // cases, the order value must be recomputed and set to the real
+    // maximum to avoid failing the later sanity checks.
     size_t inputParamCount = _modelData.TotalParameterCount() - _modelData.ResultParameterCount();
 
-    if( _modelData.ProvidedArguments.find( SWITCH_ORDER ) == _modelData.ProvidedArguments.end() )
+    if( _modelData.ProvidedArguments.find( SWITCH_ORDER ) == _modelData.ProvidedArguments.end()
+     || _modelData.Order == MAXIMUM_ORDER )
     {
-        // if submidels were defined, don't need any params, otherwise order = params without submodels
+        // if submodels were defined, don't need any params, otherwise order = params without submodels
         if( _modelData.Submodels.size() > 0 )
         {
             if( _modelData.Order > static_cast<int>( rootModel->GetSubmodelCount() ) )
