@@ -31,6 +31,15 @@ add_library(${target_name}
     ${pict_api_src}
 )
 
+add_library(${target_name}_shared
+  SHARED
+    ${pict_api_inc}
+    ${pict_api_src}
+)
+
+set_target_properties(${target_name}_shared PROPERTIES OUTPUT_NAME ${pict_api_output})
+
+
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}
   FILES
     ${pict_api_inc}

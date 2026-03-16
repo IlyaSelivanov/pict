@@ -1,0 +1,10 @@
+FROM --platform=linux/amd64 registry.access.redhat.com/ubi9/toolbox:9.2 AS builder
+
+RUN dnf install -y cmake g++
+RUN mkdir /tmp/pict
+COPY ./ /tmp/pict/
+
+RUN cd /tmp/pict/ && \
+    rm -rf build && \
+    cmake -DCMAKE_BUILD_TYPE=Release -S . -B build && \
+    cmake --build build --target pict_api_shared
